@@ -19,6 +19,10 @@ npm run dev
 
 Run `npm run lint` and `npm run build` before deploying.
 
+## Recipe imports
+
+Recipe imports run through the Netlify Function at `/.netlify/functions/import-meal`. Deploy the site with Netlify so the function is available. For local end-to-end testing, use Netlify CLI with `netlify dev` instead of `npm run dev`; imported pages must expose a Schema.org `Recipe` JSON-LD block.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

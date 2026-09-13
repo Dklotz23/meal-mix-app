@@ -11,12 +11,18 @@ export default function ManageMeals() {
   const { meals, loading, HOUSEHOLD_ID } = useData();
   const [newMealName, setNewMealName] = useState("");
   const [newRecipeUrl, setNewRecipeUrl] = useState("");
+  const [newRecipe, setNewRecipe] = useState("");
+  const [entryMode, setEntryMode] = useState('manual');
+  const [importUrl, setImportUrl] = useState('');
+  const [importedMeal, setImportedMeal] = useState(null);
+  const [isImporting, setIsImporting] = useState(false);
   const [selectedTags, setSelectedTags] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedMealId, setExpandedMealId] = useState(null);
   const [editingMealId, setEditingMealId] = useState(null);
   const [editIngredients, setEditIngredients] = useState([]);
   const [editRecipeUrl, setEditRecipeUrl] = useState("");
+  const [editRecipe, setEditRecipe] = useState("");
   const [isSavingIngredients, setIsSavingIngredients] = useState(false);
 
   // Ingredient Builder State
@@ -55,6 +61,7 @@ export default function ManageMeals() {
       await addDoc(mealsRef, {
         name: newMealName,
         recipeUrl: newRecipeUrl.trim(),
+        recipe: newRecipe.trim(),
         tags: selectedTags,
         ingredients: ingredients, // Injected the ingredients array here
         created_at: serverTimestamp()
@@ -63,12 +70,55 @@ export default function ManageMeals() {
       // Reset everything
       setNewMealName('');
       setNewRecipeUrl('');
+      setNewRecipe('');
       setSelectedTags([]);
       setIngredients([]);
       setCurIngredientName("");
     } catch (error) {
       console.error("Error adding meal:", error);
       alert("Failed to add meal.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleImportMeal = async (e) => {
+    e.preventDefault();
+    if (!importUrl.trim()) return;
+
+    setIsImporting(true);
+    setImportedMeal(null);
+    try {
+      const response = await fetch('/.netlify/functions/import-meal', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ url: importUrl.trim() })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Unable to import this recipe.');
+      setImportedMeal(data);
+    } catch (error) {
+      console.error('Error importing meal:', error);
+      alert(error.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const saveImportedMeal = async () => {
+    if (!importedMeal) return;
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, 'households', HOUSEHOLD_ID, 'meals'), {
+        ...importedMeal,
+        tags: [],
+        created_at: serverTimestamp()
+      });
+      setImportUrl('');
+      setImportedMeal(null);
+    } catch (error) {
+      console.error('Error saving imported meal:', error);
+      alert('Failed to save imported meal.');
     } finally {
       setIsSubmitting(false);
     }
@@ -90,6 +140,7 @@ export default function ManageMeals() {
     setEditingMealId(meal.id);
     setEditIngredients(meal.ingredients ? meal.ingredients.map(ingredient => ({ ...ingredient })) : []);
     setEditRecipeUrl(meal.recipeUrl || "");
+    setEditRecipe(meal.recipe || "");
   };
 
   const updateEditIngredient = (index, field, value) => {
@@ -119,7 +170,8 @@ export default function ManageMeals() {
     try {
       await updateDoc(doc(db, "households", HOUSEHOLD_ID, "meals", mealId), {
         ingredients: validIngredients,
-        recipeUrl: editRecipeUrl.trim()
+        recipeUrl: editRecipeUrl.trim(),
+        recipe: editRecipe.trim()
       });
       setEditingMealId(null);
     } catch (error) {
@@ -134,10 +186,34 @@ export default function ManageMeals() {
 
   return (
     <div className="pb-24 max-w-md mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">Your Menu</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">Your Meals</h1>
 
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 mb-8">
         <h2 className="text-lg font-semibold mb-4 text-gray-700">Add New Option</h2>
+        <div className="grid grid-cols-2 gap-2 mb-5 p-1 bg-gray-100 rounded-xl">
+          <button type="button" onClick={() => setEntryMode('import')} className={`py-2 px-2 rounded-lg text-xs font-bold transition-colors ${entryMode === 'import' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'}`}>Import from Web</button>
+          <button type="button" onClick={() => setEntryMode('manual')} className={`py-2 px-2 rounded-lg text-xs font-bold transition-colors ${entryMode === 'manual' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'}`}>Manually Add</button>
+        </div>
+
+        {entryMode === 'import' ? (
+          <form onSubmit={handleImportMeal}>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Recipe Website URL</label>
+            <input type="url" required value={importUrl} onChange={event => setImportUrl(event.target.value)} placeholder="https://example.com/recipe" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none" />
+            <p className="text-xs text-gray-400 mt-2">The page must publish structured Recipe data.</p>
+            <button type="submit" disabled={!importUrl.trim() || isImporting} className="w-full mt-4 bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md disabled:opacity-50">{isImporting ? 'Importing...' : 'Extract Meal Details'}</button>
+            {importedMeal && (
+              <div className="mt-5 border-t border-gray-100 pt-4">
+                <h3 className="font-bold text-gray-800">{importedMeal.name}</h3>
+                <p className="text-xs text-gray-500 mt-1">{importedMeal.ingredients.length} ingredients imported</p>
+                <div className="mt-3 max-h-32 overflow-y-auto space-y-1">
+                  {importedMeal.ingredients.map((ingredient, index) => <p key={`${ingredient.name}-${index}`} className="text-sm text-gray-700">{ingredient.amount} {ingredient.unit} {ingredient.name}</p>)}
+                </div>
+                {importedMeal.recipe && <p className="text-xs text-gray-500 mt-3 whitespace-pre-line line-clamp-5">{importedMeal.recipe}</p>}
+                <button type="button" onClick={saveImportedMeal} disabled={isSubmitting} className="w-full mt-4 bg-gray-900 text-white font-bold py-3 rounded-xl disabled:opacity-50">{isSubmitting ? 'Saving...' : 'Save Imported Meal'}</button>
+              </div>
+            )}
+          </form>
+        ) : (
         <form onSubmit={handleAddMeal}>
           
           {/* Meal Name */}
@@ -150,6 +226,11 @@ export default function ManageMeals() {
               placeholder="e.g. Tacos"
               className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all"
             />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Recipe</label>
+            <textarea value={newRecipe} onChange={event => setNewRecipe(event.target.value)} placeholder="Optional cooking instructions" rows="3" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none resize-y" />
           </div>
 
           <div className="mb-4">
@@ -261,6 +342,7 @@ export default function ManageMeals() {
             {isSubmitting ? 'Saving...' : 'Save Meal to Library'}
           </button>
         </form>
+        )}
       </div>
 
       {/* List Display */}
@@ -311,6 +393,7 @@ export default function ManageMeals() {
                             </a>
                           </div>
                         )}
+                        {meal.recipe && <div className="mb-4"><p className="text-xs font-bold text-gray-500 uppercase mb-1">Recipe</p><p className="text-sm text-gray-700 whitespace-pre-line">{meal.recipe}</p></div>}
                         <div className="space-y-2 mb-4">
                           {mealIngredients.length > 0 ? mealIngredients.map((ingredient, index) => (
                             <div key={`${ingredient.name}-${index}`} className="flex justify-between text-sm">
@@ -332,6 +415,10 @@ export default function ManageMeals() {
                             placeholder="https://example.com/recipe"
                             className="w-full p-2 border border-gray-200 rounded-lg text-sm"
                           />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Recipe</label>
+                          <textarea value={editRecipe} onChange={event => setEditRecipe(event.target.value)} rows="3" placeholder="Cooking instructions" className="w-full p-2 border border-gray-200 rounded-lg text-sm resize-y" />
                         </div>
                         {editIngredients.map((ingredient, index) => (
                           <div key={index} className="flex gap-2 items-center">
