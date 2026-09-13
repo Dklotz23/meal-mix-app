@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // Read variables from .env
@@ -16,5 +17,4 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firestore (The Database)
 export const db = getFirestore(app);
-
-// (Optional) We will add Auth here later
+export const auth = getAuth(app);

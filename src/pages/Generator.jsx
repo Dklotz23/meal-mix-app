@@ -47,7 +47,7 @@ export default function Generator() {
   const { meals, weekPlan, lockedDays, selectedDays, HOUSEHOLD_ID } = useData();
   const [shufflingDays, setShufflingDays] = useState([]);
   const [showErrorModal, setShowErrorModal] = useState(false);
-  const [filterTag, setFilterTag] = useState(null);
+  const [filterTag] = useState(null);
   const [manualSelectDay, setManualSelectDay] = useState(null);
   
   const navigate = useNavigate();

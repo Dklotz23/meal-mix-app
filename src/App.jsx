@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/layout/Layout';
+import Auth from './pages/Auth';
+import { useAuth } from './context/AuthContext';
 
 // Import Pages (Currently empty placeholders)
 import Generator from './pages/Generator';
@@ -7,6 +9,16 @@ import ManageMeals from './pages/ManageMeals';
 import Pantry from './pages/Pantry';
 
 function App() {
+  const { user, authLoading } = useAuth();
+
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Auth />;
+  }
+
   return (
     <Router>
       <Layout>

@@ -1,4 +1,23 @@
-# React + Vite
+# Meal Mix
+
+Meal planning app built with React, Vite, Firebase Authentication, and Firestore.
+
+## Firebase setup
+
+1. In Firebase Console, enable **Authentication > Sign-in method > Email/Password**.
+2. Deploy [firestore.rules](firestore.rules) to the `weekly-meal-mix` project.
+3. Copy the Firebase web app settings into the local `.env` file using the existing `VITE_*` variable names.
+
+New accounts are seeded with the catalog in [src/lib/seedMeals.js](src/lib/seedMeals.js). Each account's meals, pantry, and weekly plan are stored under `households/{userId}`.
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+Run `npm run lint` and `npm run build` before deploying.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

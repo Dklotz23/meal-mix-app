@@ -1,9 +1,0 @@
-
-
-
-VITE_API_KEY=AIzaSyAHiB14jf9BLjaG2uTe0L6kno-PxmdG95g
-VITE_AUTH_DOMAIN=weekly-meal-mix.firebaseapp.com
-VITE_PROJECT_ID=weekly-meal-mix
-VITE_STORAGE_BUCKET=weekly-meal-mix.firebasestorage.app
-VITE_MESSAGING_SENDER_ID=961039178503
-VITE_APP_ID=1:961039178503:web:b7b738b7e866074e8dc3a2
