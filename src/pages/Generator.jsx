@@ -87,8 +87,6 @@ export default function Generator() {
     const hasMeals = DAYS.some(day => !!weekPlan[day]);
     if (!hasMeals) return;
 
-    if (!window.confirm("Clear all meals from this week's plan?")) return;
-
     try {
       const householdRef = doc(db, "households", HOUSEHOLD_ID);
       const updates = {

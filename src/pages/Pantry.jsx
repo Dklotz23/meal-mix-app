@@ -52,8 +52,6 @@ export default function Pantry() {
 
   // 4. Clear Completed
   const clearCompleted = async () => {
-    if(!window.confirm("Clear all checked items?")) return;
-    
     const householdRef = doc(db, "households", HOUSEHOLD_ID);
     const newPantry = pantry.filter(i => !i.checked);
     await updateDoc(householdRef, { pantry: newPantry });
@@ -110,6 +108,22 @@ export default function Pantry() {
               item.checked ? 'border-gray-100 bg-gray-50 opacity-60' : 'border-gray-200 shadow-sm'
             }`}
           >
+
+            {/* Delete Button */}
+            <button 
+              onClick={() => deleteItem(item)}
+              className="text-gray-300 hover:text-red-500 p-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Text */}
+            <span className={`flex-grow font-medium text-lg ${item.checked ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+              {item.text}
+            </span>
+
             {/* Checkbox */}
             <button
               onClick={() => toggleItem(item)}
@@ -124,20 +138,6 @@ export default function Pantry() {
               )}
             </button>
 
-            {/* Text */}
-            <span className={`flex-grow font-medium text-lg ${item.checked ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-              {item.text}
-            </span>
-
-            {/* Delete Button */}
-            <button 
-              onClick={() => deleteItem(item)}
-              className="text-gray-300 hover:text-red-500 p-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
         ))}
       </div>

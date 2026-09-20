@@ -43,7 +43,7 @@ export default function Auth() {
             {isSignUp ? "Plan meals your way." : "Welcome back."}
           </h1>
           <p className="mt-2 text-gray-500">
-            {isSignUp ? "Create an account and start with your seeded meal collection." : "Log in to access your meals and weekly plan."}
+            {isSignUp ? "Create an account! We've started you off with some of our favorite meals." : "Log in to access your meals and weekly plan."}
           </p>
         </div>
 

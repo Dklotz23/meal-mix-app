@@ -1,9 +1,16 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import logo from '../../assets/logo.png';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Layout({ children }) {
   const { user, logOut } = useAuth();
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   return (
     // 1. Outer Background: Gray and centered (Like a desktop workspace)
