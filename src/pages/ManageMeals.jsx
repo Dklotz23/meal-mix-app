@@ -12,10 +12,11 @@ export default function ManageMeals() {
   const [newMealName, setNewMealName] = useState("");
   const [newRecipeUrl, setNewRecipeUrl] = useState("");
   const [newRecipe, setNewRecipe] = useState("");
-  const [entryMode, setEntryMode] = useState('manual');
+  const [entryMode, setEntryMode] = useState('import');
   const [importUrl, setImportUrl] = useState('');
   const [importedMeal, setImportedMeal] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedMealId, setExpandedMealId] = useState(null);
@@ -88,6 +89,7 @@ export default function ManageMeals() {
 
     setIsImporting(true);
     setImportedMeal(null);
+    setImportError('');
     try {
       const response = await fetch('/.netlify/functions/import-meal', {
         method: 'POST',
@@ -99,7 +101,7 @@ export default function ManageMeals() {
       setImportedMeal(data);
     } catch (error) {
       console.error('Error importing meal:', error);
-      alert(error.message);
+      setImportError(error.message || 'Unable to import this recipe. Please try again.');
     } finally {
       setIsImporting(false);
     }
@@ -118,7 +120,7 @@ export default function ManageMeals() {
       setImportedMeal(null);
     } catch (error) {
       console.error('Error saving imported meal:', error);
-      alert('Failed to save imported meal.');
+      setImportError(error.message || 'Failed to save imported meal. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -186,6 +188,18 @@ export default function ManageMeals() {
 
   return (
     <div className="pb-24 max-w-md mx-auto p-4">
+      {importError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="import-error-title">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <h2 id="import-error-title" className="text-lg font-bold text-gray-800">Unable to import recipe</h2>
+            <p className="mt-3 text-sm text-gray-600">An error occurred while trying to import the recipe. Please check the URL and try again.</p>
+            <button type="button" onClick={() => setImportError('')} className="mt-5 w-full rounded-lg bg-orange-600 py-3 font-bold text-white hover:bg-orange-700">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       <h1 className="text-2xl font-bold mb-6 text-gray-800">Your Meals</h1>
 
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 mb-8">

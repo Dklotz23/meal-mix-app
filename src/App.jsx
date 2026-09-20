@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import Auth from './pages/Auth';
@@ -10,6 +11,10 @@ import Pantry from './pages/Pantry';
 
 function App() {
   const { user, authLoading } = useAuth();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [user]);
 
   if (authLoading) {
     return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
