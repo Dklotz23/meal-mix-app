@@ -9,6 +9,8 @@ const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 
 const parseAmount = (amount) => {
   const value = String(amount).trim();
+  if (!value || amount === null || amount === undefined) return null;
+
   const parts = value.split(/\s+/);
   let total = 0;
 
@@ -104,7 +106,7 @@ export default function Generator() {
     }
   };
 
-  const moveLockedMealsToPantry = async () => {
+  const moveLockedMealsToStore = async () => {
     const plannedMealNames = DAYS
       .map(day => weekPlan[day])
       .filter(Boolean);
@@ -144,9 +146,13 @@ export default function Generator() {
         });
       });
 
-      const newPantryItems = [...ingredientTotals.values()].map(ingredient => ({
+      const newStoreItems = [...ingredientTotals.values()].map(ingredient => ({
         id: uuidv4(),
-        text: `${ingredient.amount === null ? ingredient.rawAmount : formatAmount(ingredient.amount)} ${ingredient.unit} ${ingredient.name}`,
+        text: [
+          ingredient.amount === null ? ingredient.rawAmount : formatAmount(ingredient.amount),
+          ingredient.unit,
+          ingredient.name
+        ].filter(Boolean).join(' '),
         checked: false
       })).concat(
         [...mealsWithoutIngredients].map(mealName => ({
@@ -157,11 +163,11 @@ export default function Generator() {
       );
 
       await updateDoc(householdRef, {
-        pantry: newPantryItems
+        store: newStoreItems
       });
       navigate('/store');
     } catch (error) {
-      console.error("Error refreshing pantry from plan:", error);
+      console.error("Error refreshing store from plan:", error);
     }
   };
 
@@ -423,7 +429,7 @@ const toggleLock = async (e, day) => {
                 /* We add a check to make sure there's actually a meal in the plan before showing this */
                 Object.keys(weekPlan).some(day => !!weekPlan[day]) && (
                   <button 
-                    onClick={moveLockedMealsToPantry}
+                    onClick={moveLockedMealsToStore}
                     className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-green-700 transition-all flex items-center gap-2 animate-in fade-in zoom-in duration-300"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">

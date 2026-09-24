@@ -7,7 +7,7 @@ import { useAuth } from './context/AuthContext';
 // Import Pages (Currently empty placeholders)
 import Generator from './pages/Generator';
 import ManageMeals from './pages/ManageMeals';
-import Pantry from './pages/Pantry';
+import Store from './pages/Store';
 
 function App() {
   const { user, authLoading } = useAuth();
@@ -35,8 +35,7 @@ function App() {
           <Route path="/manage" element={<ManageMeals />} />
           
           {/* 3. Store Page: Grocery list */}
-          <Route path="/store" element={<Pantry />} />
-          <Route path="/pantry" element={<Pantry />} />
+          <Route path="/store" element={<Store />} />
         </Routes>
       </Layout>
     </Router>

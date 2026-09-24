@@ -4,8 +4,8 @@ import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { v4 as uuidv4 } from 'uuid'; // We use this for unique IDs
 
-export default function Pantry() {
-  const { pantry, HOUSEHOLD_ID } = useData();
+export default function Store() {
+  const { store, HOUSEHOLD_ID } = useData();
   const [newItem, setNewItem] = useState('');
 
   // 1. Add Item
@@ -21,7 +21,7 @@ export default function Pantry() {
 
     const householdRef = doc(db, "households", HOUSEHOLD_ID);
     await updateDoc(householdRef, {
-      pantry: arrayUnion(itemObj)
+      store: arrayUnion(itemObj)
     });
 
     setNewItem('');
@@ -33,11 +33,11 @@ export default function Pantry() {
     const householdRef = doc(db, "households", HOUSEHOLD_ID);
     
     // Create new array with the flipped status
-    const newPantry = pantry.map(item => 
+    const newStore = store.map(item => 
       item.id === itemToToggle.id ? { ...item, checked: !item.checked } : item
     );
 
-    await updateDoc(householdRef, { pantry: newPantry });
+    await updateDoc(householdRef, { store: newStore });
   };
 
   // 3. Delete Item (Swipe to delete style logic)
@@ -45,16 +45,16 @@ export default function Pantry() {
     const householdRef = doc(db, "households", HOUSEHOLD_ID);
     // Note: arrayRemove only works if the object matches EXACTLY. 
     // Since 'checked' might have changed, it's safer to filter and rewrite.
-    const newPantry = pantry.filter(i => i.id !== item.id);
+    const newStore = store.filter(i => i.id !== item.id);
     
-    await updateDoc(householdRef, { pantry: newPantry });
+    await updateDoc(householdRef, { store: newStore });
   };
 
   // 4. Clear Completed
   const clearCompleted = async () => {
     const householdRef = doc(db, "households", HOUSEHOLD_ID);
-    const newPantry = pantry.filter(i => !i.checked);
-    await updateDoc(householdRef, { pantry: newPantry });
+    const newStore = store.filter(i => !i.checked);
+    await updateDoc(householdRef, { store: newStore });
   };
 
   return (
@@ -62,9 +62,9 @@ export default function Pantry() {
       <div className="flex justify-between items-end mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Grocery List</h1>
-          <p className="text-gray-500 text-sm">{pantry.filter(i => !i.checked).length} items needed</p>
+          <p className="text-gray-500 text-sm">{store.filter(i => !i.checked).length} items needed</p>
         </div>
-        {pantry.some(i => i.checked) && (
+        {store.some(i => i.checked) && (
           <button 
             onClick={clearCompleted}
             className="text-orange-600 text-sm font-bold hover:underline"
@@ -94,14 +94,14 @@ export default function Pantry() {
 
       {/* --- THE LIST --- */}
       <div className="space-y-2">
-        {pantry.length === 0 && (
+        {store.length === 0 && (
           <div className="text-center py-10 text-gray-400">
             <p>Your list is empty.</p>
             <p className="text-sm">Time to raid the fridge?</p>
           </div>
         )}
 
-        {pantry.map(item => (
+        {store.map(item => (
           <div 
             key={item.id}
             className={`flex items-center p-4 bg-white rounded-xl border transition-all ${
@@ -137,7 +137,6 @@ export default function Pantry() {
                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
               )}
             </button>
-
           </div>
         ))}
       </div>

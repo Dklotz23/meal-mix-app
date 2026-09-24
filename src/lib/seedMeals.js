@@ -105,7 +105,7 @@ export async function seedHousehold(householdId) {
   const householdRef = doc(db, "households", householdId);
 
   batch.set(householdRef, {
-    pantry: [],
+    store: [],
     week_plan: {},
     locked_days: [],
     selected_days: []
