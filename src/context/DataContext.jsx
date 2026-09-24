@@ -14,7 +14,7 @@ export function useData() {
 export function DataProvider({ children }) {
   const { user } = useAuth();
   const [meals, setMeals] = useState([]);
-  const [pantry, setPantry] = useState([]);
+  const [store, setStore] = useState([]);
   const [weekPlan, setWeekPlan] = useState({});
   const [lockedDays, setLockedDays] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,7 @@ export function DataProvider({ children }) {
   useEffect(() => {
     if (!HOUSEHOLD_ID) {
       setMeals([]);
-      setPantry([]);
+      setStore([]);
       setWeekPlan({});
       setLockedDays([]);
       setSelectedDays([]);
@@ -51,7 +51,7 @@ export function DataProvider({ children }) {
   // Check if the document truly exists in the cloud
   if (docSnap.exists() && docSnap.data() !== undefined) {
     const data = docSnap.data();
-    setPantry(data.pantry || []);
+    setStore(data.store || []);
     setWeekPlan(data.week_plan || {});
     setLockedDays(data.locked_days || []);
     setLoading(false);
@@ -81,7 +81,7 @@ export function DataProvider({ children }) {
   // ... rest of provider
   const value = {
     meals,
-    pantry,
+    store,
     weekPlan,
     lockedDays,
     selectedDays,
