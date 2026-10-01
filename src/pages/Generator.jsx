@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const normalizeItem = (value) => String(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 const parseAmount = (amount) => {
   const value = String(amount).trim();
@@ -46,9 +47,13 @@ const formatAmount = (amount) => {
 
 export default function Generator() {
   // 1. Pull selectedDays from context (this was missing from your destructuring)
-  const { meals, weekPlan, lockedDays, selectedDays, HOUSEHOLD_ID } = useData();
+  const { meals, weekPlan, lockedDays, selectedDays, pantry, HOUSEHOLD_ID } = useData();
   const [shufflingDays, setShufflingDays] = useState([]);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [storeReview, setStoreReview] = useState(null);
+  const [manualStoreItem, setManualStoreItem] = useState('');
+  const [isSavingStore, setIsSavingStore] = useState(false);
+  const [storeSaveError, setStoreSaveError] = useState('');
   const [filterTag] = useState(null);
   const [manualSelectDay, setManualSelectDay] = useState(null);
   
@@ -146,28 +151,80 @@ export default function Generator() {
         });
       });
 
-      const newStoreItems = [...ingredientTotals.values()].map(ingredient => ({
-        id: uuidv4(),
-        text: [
+      const pantryNames = new Set(pantry.map(item => normalizeItem(item.text)));
+      const candidateItems = [...ingredientTotals.values()].map(ingredient => {
+        const text = [
           ingredient.amount === null ? ingredient.rawAmount : formatAmount(ingredient.amount),
           ingredient.unit,
           ingredient.name
-        ].filter(Boolean).join(' '),
-        checked: false
-      })).concat(
+        ].filter(Boolean).join(' ');
+
+        return {
+          item: { id: uuidv4(), text, checked: false },
+          pantryKeys: [normalizeItem(ingredient.name), normalizeItem(text)]
+        };
+      }).concat(
         [...mealsWithoutIngredients].map(mealName => ({
-          id: uuidv4(),
-          text: mealName,
-          checked: false
+          item: { id: uuidv4(), text: mealName, checked: false },
+          pantryKeys: [normalizeItem(mealName)]
         }))
       );
 
-      await updateDoc(householdRef, {
-        store: newStoreItems
+      const removedItems = [];
+      const groceryItems = [];
+      candidateItems.forEach(({ item, pantryKeys }) => {
+        if (pantryKeys.some(key => pantryNames.has(key))) {
+          removedItems.push(item);
+        } else {
+          groceryItems.push(item);
+        }
       });
-      navigate('/store');
+
+      if (removedItems.length === 0) {
+        await updateDoc(householdRef, { store: groceryItems });
+        navigate('/store');
+        return;
+      }
+
+      setStoreReview({ groceryItems, removedItems });
+      setStoreSaveError('');
     } catch (error) {
       console.error("Error refreshing store from plan:", error);
+    }
+  };
+
+  const addStoreItemBack = (itemToAdd) => {
+    setStoreReview(current => ({
+      ...current,
+      groceryItems: [...current.groceryItems, itemToAdd],
+      removedItems: current.removedItems.filter(item => item.id !== itemToAdd.id)
+    }));
+  };
+
+  const addManualStoreItem = (event) => {
+    event.preventDefault();
+    const text = manualStoreItem.trim();
+    if (!text) return;
+
+    setStoreReview(current => ({
+      ...current,
+      groceryItems: [...current.groceryItems, { id: uuidv4(), text, checked: false }]
+    }));
+    setManualStoreItem('');
+  };
+
+  const continueToStore = async () => {
+    setIsSavingStore(true);
+    setStoreSaveError('');
+    try {
+      const householdRef = doc(db, 'households', HOUSEHOLD_ID);
+      await updateDoc(householdRef, { store: storeReview.groceryItems });
+      navigate('/store');
+    } catch (error) {
+      console.error('Error saving grocery list:', error);
+      setStoreSaveError('Could not save your Grocery List. Please try again.');
+    } finally {
+      setIsSavingStore(false);
     }
   };
 
@@ -346,7 +403,7 @@ const toggleLock = async (e, day) => {
 
                   <div>
                     {shufflingDays.includes(day) ? (
-                      <span className="font-bold text-blue-400 animate-pulse">Picking...</span>
+                      <span className="font-bold text-blue-400 animate-pulse">Mixing...</span>
                     ) : hasMeal ? (
                       <div className="flex flex-col">
                         <span className="font-bold text-blue-900">{weekPlan[day]}</span>
@@ -443,6 +500,53 @@ const toggleLock = async (e, day) => {
           )}
         </div>
       </div>
+
+      {storeReview && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl animate-in zoom-in duration-200">
+            <div className="flex flex-col text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-50">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-6 w-6 text-orange-600">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m-7 4h8a2 2 0 002-2V6a2 2 0 00-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+
+              <h3 id="store-review-title" className="mb-1 text-lg font-bold text-gray-900">Time to restock?.</h3>
+              <p className="mb-6 text-sm text-gray-500">These ingredients were found in your pantry.</p>
+
+              <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1 text-left">
+                {storeReview.removedItems.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-gray-500">Time to go!</p>
+                ) : storeReview.removedItems.map(item => (
+                  <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3">
+                    <span className="min-w-0 break-words text-sm font-medium text-gray-800">{item.text}</span>
+                    <button
+                      type="button"
+                      onClick={() => addStoreItemBack(item)}
+                      className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:border-orange-400 hover:text-orange-700"
+                    >
+                      Need
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {storeSaveError && <p role="alert" className="mt-4 text-sm text-red-600">{storeSaveError}</p>}
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={continueToStore}
+                  disabled={isSavingStore}
+                  className="rounded-lg bg-green-600 px-5 py-2 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50"
+                >
+                  {isSavingStore ? 'Here we go...' : 'Continue to Store'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- CAPACITY ERROR MODAL --- */}
       {showErrorModal && (

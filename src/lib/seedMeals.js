@@ -106,6 +106,7 @@ export async function seedHousehold(householdId) {
 
   batch.set(householdRef, {
     store: [],
+    pantry: [],
     week_plan: {},
     locked_days: [],
     selected_days: []
