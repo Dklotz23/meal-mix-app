@@ -29,7 +29,7 @@ export default function Layout({ children }) {
     <div className="min-h-screen bg-gray-100 flex justify-center font-sans">
       
       {/* 2. The "Phone" Container: Fixed width, white background, shadow */}
-      <div className="w-full max-w-md bg-white min-h-screen shadow-2xl relative">
+      <div className="w-full max-w-md bg-white min-h-screen shadow-2xl relative overflow-x-clip">
         
         {/* Mobile Top Header (Now visible everywhere) */}
         <div className="bg-white p-4 flex justify-between items-center sticky top-0 z-10 border-b border-gray-100">

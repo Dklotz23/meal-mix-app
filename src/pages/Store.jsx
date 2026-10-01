@@ -97,7 +97,7 @@ export default function Store() {
         {store.length === 0 && (
           <div className="text-center py-10 text-gray-400">
             <p>Your list is empty.</p>
-            <p className="text-sm">Time to raid the fridge?</p>
+            {/* <p className="text-sm">Time to raid the fridge?</p> */}
           </div>
         )}
 
