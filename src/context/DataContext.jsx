@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { db } from "../lib/firebase";
 import { collection, doc, onSnapshot } from "firebase/firestore";
 import { seedHousehold } from "../lib/seedMeals";
+import { DEFAULT_STORE_SECTIONS } from "../lib/storeSections";
 import { useAuth } from "./AuthContext";
 
 const DataContext = createContext();
@@ -15,6 +16,7 @@ export function DataProvider({ children }) {
   const { user } = useAuth();
   const [meals, setMeals] = useState([]);
   const [store, setStore] = useState([]);
+  const [storeSections, setStoreSections] = useState(DEFAULT_STORE_SECTIONS);
   const [pantry, setPantry] = useState([]);
   const [weekPlan, setWeekPlan] = useState({});
   const [lockedDays, setLockedDays] = useState([]);
@@ -27,6 +29,7 @@ export function DataProvider({ children }) {
     if (!HOUSEHOLD_ID) {
       setMeals([]);
       setStore([]);
+      setStoreSections(DEFAULT_STORE_SECTIONS);
       setPantry([]);
       setWeekPlan({});
       setLockedDays([]);
@@ -54,6 +57,7 @@ export function DataProvider({ children }) {
   if (docSnap.exists() && docSnap.data() !== undefined) {
     const data = docSnap.data();
     setStore(data.store || []);
+  setStoreSections(data.store_sections || DEFAULT_STORE_SECTIONS);
     setPantry(data.pantry || []);
     setWeekPlan(data.week_plan || {});
     setLockedDays(data.locked_days || []);
@@ -85,6 +89,7 @@ export function DataProvider({ children }) {
   const value = {
     meals,
     store,
+    storeSections,
     pantry,
     weekPlan,
     lockedDays,

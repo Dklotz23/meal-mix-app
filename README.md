@@ -23,6 +23,10 @@ Run `npm run lint` and `npm run build` before deploying.
 
 Recipe imports run through the Netlify Function at `/.netlify/functions/import-meal`. Deploy the site with Netlify so the function is available. For local end-to-end testing, use Netlify CLI with `netlify dev` instead of `npm run dev`; imported pages must expose a Schema.org `Recipe` JSON-LD block.
 
+## Store section sorting
+
+Store sorting runs through a Netlify Function and requires a server-side `GEMINI_API_KEY` environment variable. Add it in the Netlify site environment variables for deployed use. For local testing, set `GEMINI_API_KEY` in your shell before running `netlify dev`; do not expose it through a `VITE_*` variable or commit it to the repository.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
