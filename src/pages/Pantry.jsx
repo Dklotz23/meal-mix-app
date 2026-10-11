@@ -44,7 +44,7 @@ export default function Pantry() {
           type="text"
           value={newItem}
           onChange={event => setNewItem(event.target.value)}
-          placeholder="Add item (e.g. Salt, Pepper, Olive Oil)"
+          placeholder="Add item (e.g. Salt, Olive Oil...)"
           className="w-full rounded-xl border border-gray-300 py-3 pl-4 pr-20 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
         />
         <button

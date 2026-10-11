@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useData } from '../context/DataContext';
+import { MISC_STORE_SECTION } from '../lib/storeSections';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useNavigate } from 'react-router-dom';
@@ -47,13 +48,14 @@ const formatAmount = (amount) => {
 
 export default function Generator() {
   // 1. Pull selectedDays from context (this was missing from your destructuring)
-  const { meals, weekPlan, lockedDays, selectedDays, pantry, HOUSEHOLD_ID } = useData();
+  const { meals, weekPlan, lockedDays, selectedDays, pantry, storeSections, HOUSEHOLD_ID } = useData();
   const [shufflingDays, setShufflingDays] = useState([]);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [storeReview, setStoreReview] = useState(null);
   const [manualStoreItem, setManualStoreItem] = useState('');
   const [isSavingStore, setIsSavingStore] = useState(false);
   const [storeSaveError, setStoreSaveError] = useState('');
+  const [showClassificationErrorModal, setShowClassificationErrorModal] = useState(false);
   const [filterTag] = useState(null);
   const [manualSelectDay, setManualSelectDay] = useState(null);
   
@@ -121,6 +123,8 @@ export default function Generator() {
       return;
     }
 
+    setIsSavingStore(true);
+    setStoreSaveError('');
     try {
       const householdRef = doc(db, "households", HOUSEHOLD_ID);
       const ingredientTotals = new Map();
@@ -181,7 +185,12 @@ export default function Generator() {
       });
 
       if (removedItems.length === 0) {
-        await updateDoc(householdRef, { store: groceryItems });
+        const { items, categorized } = await classifyStoreItems(groceryItems);
+        await updateDoc(householdRef, { store: items });
+        if (!categorized) {
+          setShowClassificationErrorModal(true);
+          return;
+        }
         navigate('/store');
         return;
       }
@@ -190,6 +199,9 @@ export default function Generator() {
       setStoreSaveError('');
     } catch (error) {
       console.error("Error refreshing store from plan:", error);
+      setStoreSaveError(error.message || 'Could not organize your Grocery List. Please try again.');
+    } finally {
+      setIsSavingStore(false);
     }
   };
 
@@ -218,14 +230,52 @@ export default function Generator() {
     setStoreSaveError('');
     try {
       const householdRef = doc(db, 'households', HOUSEHOLD_ID);
-      await updateDoc(householdRef, { store: storeReview.groceryItems });
+      const { items, categorized } = await classifyStoreItems(storeReview.groceryItems);
+      await updateDoc(householdRef, { store: items });
+      if (!categorized) {
+        setShowClassificationErrorModal(true);
+        return;
+      }
       navigate('/store');
     } catch (error) {
       console.error('Error saving grocery list:', error);
-      setStoreSaveError('Could not save your Grocery List. Please try again.');
+      setStoreSaveError(error.message || 'Could not organize your Grocery List. Please try again.');
     } finally {
       setIsSavingStore(false);
     }
+  };
+
+  const classifyStoreItems = async (items) => {
+    if (items.length === 0) return { items, categorized: true };
+
+    const response = await fetch('/.netlify/functions/classify-store-items', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sections: [...storeSections, MISC_STORE_SECTION].map(({ id, name }) => ({ id, name })),
+        items: items.map(({ id, text }) => ({ id, text }))
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.error || 'Could not organize your Grocery List. Please try again.');
+    }
+    if (result.categorized === false) {
+      return {
+        items: items.map(item => ({ ...item, sectionId: null })),
+        categorized: false
+      };
+    }
+
+    const sectionIds = new Set([...storeSections, MISC_STORE_SECTION].map(section => section.id));
+    const assignments = new Map((result.assignments || []).map(({ itemId, sectionId }) => [itemId, sectionId]));
+    return {
+      items: items.map(item => ({
+        ...item,
+        sectionId: sectionIds.has(assignments.get(item.id)) ? assignments.get(item.id) : MISC_STORE_SECTION.id
+      })),
+      categorized: true
+    };
   };
 
   // --- PERSISTENT LOCK TOGGLE ---
@@ -487,18 +537,20 @@ const toggleLock = async (e, day) => {
                 Object.keys(weekPlan).some(day => !!weekPlan[day]) && (
                   <button 
                     onClick={moveLockedMealsToStore}
-                    className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-green-700 transition-all flex items-center gap-2 animate-in fade-in zoom-in duration-300"
+                    disabled={isSavingStore}
+                    className="bg-green-600 text-white px-6 py-2 rounded-lg font-bold shadow-lg hover:bg-green-700 transition-all flex items-center gap-2 animate-in fade-in zoom-in duration-300 disabled:cursor-wait disabled:opacity-60"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
                     </svg>
-                    Go to Store
+                    {isSavingStore ? 'Curating list...' : 'Go to Store'}
                   </button>
                 )
               )}
             </>
           )}
         </div>
+        {storeSaveError && !storeReview && <p role="alert" className="mt-3 text-center text-sm text-red-600">{storeSaveError}</p>}
       </div>
 
       {storeReview && (
@@ -511,7 +563,7 @@ const toggleLock = async (e, day) => {
                 </svg>
               </div>
 
-              <h3 id="store-review-title" className="mb-1 text-lg font-bold text-gray-900">Time to restock?.</h3>
+              <h3 id="store-review-title" className="mb-1 text-lg font-bold text-gray-900">Time to restock?</h3>
               <p className="mb-6 text-sm text-gray-500">These ingredients were found in your pantry.</p>
 
               <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1 text-left">
@@ -544,6 +596,22 @@ const toggleLock = async (e, day) => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showClassificationErrorModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="classification-error-title">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <h2 id="classification-error-title" className="text-lg font-bold text-gray-800">Unable to categorize</h2>
+            <p className="mt-3 text-sm text-gray-600">We're sorry, but we were not able to organize your list by department at this time.</p>
+            <button
+              type="button"
+              onClick={() => navigate('/store')}
+              className="mt-5 w-full rounded-lg bg-orange-600 py-3 font-bold text-white hover:bg-orange-700"
+            >
+              Continue to List
+            </button>
           </div>
         </div>
       )}
